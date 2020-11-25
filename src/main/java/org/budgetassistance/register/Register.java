@@ -21,4 +21,19 @@ public class Register {
     private BigDecimal balance;
     private String category;
 
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void add(BigDecimal amount) {
+        balance = balance.add(amount);
+    }
+
+    public void subtract(BigDecimal amount) {
+        balance = balance.subtract(amount);
+    }
 }
