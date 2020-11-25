@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.budgetassistance.account.AccountRepository;
+import org.budgetassistance.validator.BasicInputParameterValidator;
+import org.budgetassistance.validator.InputParameterValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,14 +18,19 @@ public class RegisterService {
 
     private final RegisterRepository registerRepository;
     private final AccountRepository accountRepository;
+    private final InputParameterValidator parameterValidator;
 
     @Autowired
-    public RegisterService(RegisterRepository registerRepository, AccountRepository accountRepository) {
+    public RegisterService(RegisterRepository registerRepository, AccountRepository accountRepository, BasicInputParameterValidator parameterValidator) {
         this.registerRepository = registerRepository;
         this.accountRepository = accountRepository;
+        this.parameterValidator = parameterValidator;
     }
 
     public Register recharge(String accountId, String category, BigDecimal amount) {
+        parameterValidator.validateAccount(accountId);
+        parameterValidator.validateAmount(amount);
+
         return registerRepository.findByAccountIdAndCategory(accountId, category).map(register -> {
             register.add(amount);
             return registerRepository.save(register);
@@ -31,6 +38,9 @@ public class RegisterService {
     }
 
     public Map<String, Register> transfer(String accountId, String source, String target, BigDecimal amount) {
+        parameterValidator.validateAccount(accountId);
+        parameterValidator.validateAmount(amount);
+
         Register sourceRegister = registerRepository.findByAccountIdAndCategory(accountId, source)
           .filter(register -> register.getBalance().compareTo(amount) >= 0).map(register -> {
               register.subtract(amount);
@@ -45,6 +55,8 @@ public class RegisterService {
     }
 
     public Set<Register> getBalance(String accountId) {
+        parameterValidator.validateAccount(accountId);
+
         return registerRepository.findByAccountId(accountId);
     }
 }
