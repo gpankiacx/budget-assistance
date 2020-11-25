@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.budgetassistance.account.AccountRepository;
+import org.budgetassistance.exception.ResourceNotFoundException;
 import org.budgetassistance.validator.BasicInputParameterValidator;
 import org.budgetassistance.validator.InputParameterValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RegisterService {
@@ -17,16 +19,15 @@ public class RegisterService {
     private static final String TARGET_KEY = "target";
 
     private final RegisterRepository registerRepository;
-    private final AccountRepository accountRepository;
     private final InputParameterValidator parameterValidator;
 
     @Autowired
-    public RegisterService(RegisterRepository registerRepository, AccountRepository accountRepository, BasicInputParameterValidator parameterValidator) {
+    public RegisterService(RegisterRepository registerRepository, BasicInputParameterValidator parameterValidator) {
         this.registerRepository = registerRepository;
-        this.accountRepository = accountRepository;
         this.parameterValidator = parameterValidator;
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Register recharge(String accountId, String category, BigDecimal amount) {
         parameterValidator.validateAccount(accountId);
         parameterValidator.validateAmount(amount);
@@ -34,9 +35,10 @@ public class RegisterService {
         return registerRepository.findByAccountIdAndCategory(accountId, category).map(register -> {
             register.add(amount);
             return registerRepository.save(register);
-        }).orElseThrow(() -> new RuntimeException("Register not found - " + category));
+        }).orElseThrow(() -> new ResourceNotFoundException("Register not found - " + category));
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Map<String, Register> transfer(String accountId, String source, String target, BigDecimal amount) {
         parameterValidator.validateAccount(accountId);
         parameterValidator.validateAmount(amount);
@@ -45,15 +47,16 @@ public class RegisterService {
           .filter(register -> register.getBalance().compareTo(amount) >= 0).map(register -> {
               register.subtract(amount);
               return register;
-          }).orElseThrow(() -> new RuntimeException("Could not subtract from source register - " + source));
+          }).orElseThrow(() -> new ResourceNotFoundException("Could not subtract from source register - " + source));
         Register targetRegister = registerRepository.findByAccountIdAndCategory(accountId, target).map(register -> {
             register.add(amount);
             return register;
-        }).orElseThrow(() -> new RuntimeException("Could not add to target register - " + target));
+        }).orElseThrow(() -> new ResourceNotFoundException("Could not add to target register - " + target));
         registerRepository.saveAll(List.of(sourceRegister, targetRegister));
         return Map.of(SOURCE_KEY, sourceRegister, TARGET_KEY, targetRegister);
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Set<Register> getBalance(String accountId) {
         parameterValidator.validateAccount(accountId);
 
