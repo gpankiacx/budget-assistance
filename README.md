@@ -11,11 +11,14 @@ using maven `./mvnw spring-boot:run` please see https://spring.io/guides/gs/spri
 ###### Available endpoints:
 balance
 GET  localhost:8080/v1/register/balance/{accountId}
+
 recharge
 POST localhost:8080/v1/register/recharge/{accountId}/{category}/{amount}
+
 transfer
 POST localhost:8080/v1/register/transfer/{accountId}/{source}/{target}/{amount}
 
 ###### Example data:
 AccountId: 1
+
 Register category: 'Wallet', 'Savings', 'Insurance policy' 'Food expenses')
